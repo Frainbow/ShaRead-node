@@ -3,7 +3,7 @@ var Promise = require('promise');
 var md5 = require('md5');
 var config = require('./config');
 var connPool = config.connPool;
-var loginHandler = function(req, res, next) {
+var postHandler = function(req, res, next) {
     var facebook_token = req.body.facebook_token;
 
     if (facebook_token) {
@@ -33,7 +33,7 @@ var loginHandler = function(req, res, next) {
         .then(function (value) {
 
             return new Promise(function (resolve, reject) {
-                var token = md5(Math.random());
+                var token = md5(value.email.toLocaleLowerCase() + Math.random());
                 var user = {
                     email: value.email.toLocaleLowerCase(),
                     name: value.name,
@@ -107,5 +107,7 @@ var loginHandler = function(req, res, next) {
     }
 };
 
-module.exports = loginHandler;
+module.exports = {
+    POST: postHandler
+}
 

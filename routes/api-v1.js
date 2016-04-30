@@ -12,7 +12,7 @@ router.get('/', function(req, res, next) {
     res.send(JSON.stringify(obj));
 });
 
-router.post('/login', loginHandler);
+router.post('/login', loginHandler.POST);
 router.get('/stores', storesHandler.GET);
 router.post('/stores', storesHandler.POST);
 
