@@ -44,7 +44,7 @@ var getHandler = function (req, res, next) {
                 var stores = []
 
                 for (var i = 0; i < result.length; i++) {
-                    stores.append({
+                    stores.push({
                         store_id: result[i].id,
                         store_name: result[i].store_name,
                         description: result[i].description
@@ -71,7 +71,143 @@ var getHandler = function (req, res, next) {
 }
 
 var postHandler = function (req, res, next) {
-    console.log('handler post');
+
+    var token = req.query.auth_token;
+    var conn;
+
+    if (token == undefined) {
+        var obj = { message: "no token" };
+
+        res.status(400).json(obj);
+        return
+    }
+
+    new Promise(function (resolve, reject) {
+
+        connPool.getConnection(function (err, connection) {
+
+            if (err) {
+                reject({ message: err.code });
+                return;
+            }
+
+            conn = connection;
+            resolve();
+        });
+    })
+    .then(function () {
+
+        return new Promise(function (resolve, reject) {
+            // get user_id
+            conn.query('select id from user where auth_token = ?', [token], function (err, result) {
+
+                if (err) {
+                    reject({ message: err.code });
+                    return;
+                }
+
+                if (result.length == 0) {
+                    reject({ code: 403, message: "invalid token" });
+                    return;
+                }
+
+                resolve({ user_id: result[0].id });
+            });
+        });
+    })
+    .then(function (user) {
+        // begin transaction
+        return new Promise(function (resolve, reject) {
+            conn.beginTransaction(function (err) {
+
+                if (err) {
+                    reject({ message: err.code });
+                    return;
+                }
+
+                resolve(user);
+            });
+        });
+    })
+    .then(function (user) {
+
+        return new Promise(function (resolve, reject) {
+            var store = {};
+
+            if (req.body.store_name) {
+                store.name = req.body.store_name
+            }
+
+            conn.query('insert into store set ?', [store], function (err, result) {
+
+                if (err) {
+                    reject({ rollback: true, message: err.code });
+                    return;
+                }
+
+                resolve({
+                    user_id: user.user_id,
+                    store_id: result.insertId
+                });
+            });
+        });
+    })
+    .then(function (list) {
+
+        return new Promise(function (resolve, reject) {
+
+            conn.query('insert into store_list set ?', [list], function (err, result) {
+
+                if (err) {
+                    reject({ rollback: true, message: err.code });
+                    return;
+                }
+
+                resolve(list);
+            });
+        });
+    })
+    .then(function (list) {
+        // commit
+        return new Promise(function (resolve, reject) {
+
+            conn.commit(function (err) {
+                if (err) {
+                    reject({ rollback: true, message: err.code });
+                    return;
+                }
+
+                resolve(list);
+            });
+        });
+    })
+    .then(function (list) {
+
+        var obj = {
+            "message": "OK",
+            "store_id": list.store_id
+        };
+
+        res.status(200).json(obj);
+    })
+    .catch(function (error) {
+
+        if (error.rollback) {
+            conn.rollback(function () {
+                if (conn) {
+                    conn.release();
+                    conn = null;
+                }
+            });
+        }
+        else if (conn) {
+            conn.release();
+            conn = null;
+        }
+
+        res.status(error.code || 500).json({ message: error.message });
+        console.log('catch error', error);
+    });
 }
 
 module.exports = {
