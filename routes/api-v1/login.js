@@ -93,20 +93,17 @@ var loginHandler = function(req, res, next) {
                 auth_token: user.auth_token
             };
 
-            res.status(200)
-            res.send(JSON.stringify(obj));
+            res.status(200).json(obj);
         })
         .catch(function (error) {
-            res.status(error.code || 500);
-            res.send(JSON.stringify({ message: error.message }));
+            res.status(error.code || 500).json({ message: error.message });
             console.log('catch error', error);
         });
     }
     else {
         var obj = { message: "no token" };
 
-        res.status(400);
-        res.send(JSON.stringify(obj));
+        res.status(400).json(obj);
     }
 };
 
