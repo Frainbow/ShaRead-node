@@ -15,6 +15,7 @@ router.get('/', function(req, res, next) {
 router.post('/login', loginHandler.POST);
 router.get('/stores', storesHandler.GET);
 router.post('/stores', storesHandler.POST);
+router.put('/stores/:store_id', storesHandler.PUT);
 
 module.exports = router;
 

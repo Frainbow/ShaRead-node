@@ -34,7 +34,7 @@ var getHandler = function (req, res, next) {
 
         return new Promise(function (resolve, reject) {
 
-            connPool.query('select * from store, store_list where store.id = store_list.store_id and store_list.user_id = ?', [user.user_id], function (err, result) {
+            connPool.query('select store.id, store.name, store.description from store, store_list where store.id = store_list.store_id and store_list.user_id = ?', [user.user_id], function (err, result) {
 
                 if (err) {
                     reject({ message: err.code });
@@ -46,7 +46,7 @@ var getHandler = function (req, res, next) {
                 for (var i = 0; i < result.length; i++) {
                     stores.push({
                         store_id: result[i].id,
-                        store_name: result[i].store_name,
+                        store_name: result[i].name,
                         description: result[i].description
                     });
                 }
@@ -210,8 +210,119 @@ var postHandler = function (req, res, next) {
     });
 }
 
+var putHandler = function (req, res, next) {
+
+    var token = req.query.auth_token;
+    var store_id = req.params.store_id;
+    var store = {};
+
+    if (token == undefined) {
+        var obj = { message: "no token" };
+
+        res.status(400).json(obj);
+        return;
+    }
+
+    if (req.body.store_name) {
+        store.name = req.body.store_name;
+    }
+
+    if (req.body.description) {
+        store.description = req.body.description;
+    }
+
+    if (req.body.address) {
+        store.address = req.body.address;
+    }
+
+    if (req.body.longitude) {
+        store.longitude = req.body.longitude;
+    }
+
+    if (req.body.latitude) {
+        store.latitude = req.body.latitude;
+    }
+
+    if (Object.getOwnPropertyNames(store).length == 0) {
+        var obj = { message: "no update colums" };
+
+        res.status(400).json(obj);
+        return;
+    }
+
+    new Promise(function (resolve, reject) {
+        // check auth_token
+        connPool.query('select id from user where auth_token = ?', [token], function (err, result) {
+
+            if (err) {
+                reject({ message: err.code });
+                return;
+            }
+
+            if (result.length == 0) {
+                reject({ code: 403, message: "invalid token" });
+                return;
+            }
+
+            resolve({ user_id: result[0].id })
+        });
+    })
+    .then(function (user) {
+        // check store owner
+        return new Promise(function (resolve, reject) {
+            connPool.query('select id from store_list where store_id = ? and user_id = ?', [store_id, user.user_id], function (err, result) {
+
+                if (err) {
+                    reject({ message: err.code });
+                    return;
+                }
+
+                if (result.length == 0) {
+                    reject({ code: 403, message: 'invalid owner' });
+                    return;
+                }
+
+                resolve();
+            });
+        });
+    })
+    .then(function () {
+        // update store
+        return new Promise(function (resolve, reject) {
+
+            connPool.query('update store set ? where id = ?', [store, store_id], function (err, result) {
+
+                if (err) {
+                    reject({ message: err.code });
+                    return;
+                }
+
+                if (result.affectedRows == 0) {
+                    reject({ code: 500, message: 'no affected rows' });
+                    return;
+                }
+
+                resolve();
+            });
+        });
+    })
+    .then(function () {
+
+        var obj = {
+            "message": "OK"
+        };
+
+        res.status(200).json(obj);
+    })
+    .catch(function (error) {
+        res.status(error.code || 500).json({ message: error.message });
+        console.log('catch error', error);
+    });
+};
+
 module.exports = {
     GET: getHandler,
-    POST: postHandler
+    POST: postHandler,
+    PUT: putHandler
 }
 
