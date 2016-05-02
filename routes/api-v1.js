@@ -5,6 +5,7 @@ var upload = multer({ dest: __dirname + '/../public/uploads/' });
 var loginHandler = require('./api-v1/login');
 var storesHandler = require('./api-v1/stores');
 var shelfsHandler = require('./api-v1/shelfs');
+var mrtHandler = require('./api-v1/mrt');
 
 /* GET api listing. */
 router.get('/', function(req, res, next) {
@@ -23,6 +24,7 @@ router.put('/stores/:store_id', storesHandler.PUT);
 router.get('/stores/:store_id/shelfs', shelfsHandler.GET);
 router.post('/stores/:store_id/shelfs', shelfsHandler.POST);
 router.put('/shelfs/:shelf_id', shelfsHandler.PUT);
+router.get('/mrt', mrtHandler.GET);
 
 module.exports = router;
 
