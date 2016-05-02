@@ -1,6 +1,8 @@
 var Promise = require('promise');
 var config = require('./config');
 var connPool = config.connPool;
+var fs = require('fs');
+var mkdirp = require('mkdirp');
 
 var getHandler = function (req, res, next) {
 
@@ -73,13 +75,19 @@ var getHandler = function (req, res, next) {
 var postHandler = function (req, res, next) {
 
     var token = req.query.auth_token;
+    var store_id = req.params.store_id;
     var conn;
+
+    if (store_id) {
+        postImageHandler(req, res, next);
+        return;
+    }
 
     if (token == undefined) {
         var obj = { message: "no token" };
 
         res.status(400).json(obj);
-        return
+        return;
     }
 
     new Promise(function (resolve, reject) {
@@ -209,6 +217,131 @@ var postHandler = function (req, res, next) {
         console.log('catch error', error);
     });
 }
+
+var postImageHandler = function (req, res, next) {
+
+    var token = req.query.auth_token;
+    var store_id = req.params.store_id;
+
+    if (token == undefined) {
+        var obj = { message: "no token" };
+
+        res.status(400).json(obj);
+        return
+    }
+
+    if (!req.file) {
+        var obj = { message: "no file" };
+
+        res.status(400).json(obj);
+        return
+    }
+
+    new Promise(function (resolve, reject) {
+        // check auth_token
+        connPool.query('select id from user where auth_token = ?', [token], function (err, result) {
+
+            if (err) {
+                reject({ message: err.code });
+                return;
+            }
+
+            if (result.length == 0) {
+                reject({ code: 403, message: "invalid token" });
+                return;
+            }
+
+            resolve({ user_id: result[0].id })
+        });
+    })
+    .then(function (user) {
+        // check store owner
+        return new Promise(function (resolve, reject) {
+            connPool.query('select id from store_list where store_id = ? and user_id = ?', [store_id, user.user_id], function (err, result) {
+
+                if (err) {
+                    reject({ message: err.code });
+                    return;
+                }
+
+                if (result.length == 0) {
+                    reject({ code: 403, message: 'invalid owner' });
+                    return;
+                }
+
+                resolve();
+            });
+        });
+    })
+    .then(function () {
+        // save store image to disk
+        var image_name = 'image.jpg';
+        var image_folder = '/images/stores/' + store_id;
+        var image_path = image_folder + '/' + image_name;
+        var source_path = req.file.path;
+        var target_folder = __dirname + '/../../public' + image_folder
+        var target_path = target_folder + '/' + image_name;
+
+        return new Promise(function (resolve, reject) {
+
+            mkdirp(target_folder, function (err) {
+
+                if (err) {
+                    reject({ message: "mkdirp failed" });
+                    return;
+                }
+
+                fs.rename(source_path, target_path, function (err) {
+
+                    if (err) {
+                        reject({ message: err.code });
+                        return;
+                    }
+
+                    resolve({ image_path: config.imageHost + image_path + '?' + req.file.filename });
+                });
+            });
+        });
+    })
+    .then(function (store) {
+        // update store image path to DB
+        return new Promise(function (resolve, reject) {
+
+            connPool.query('update store set ? where id = ?', [store, store_id], function (err, result) {
+
+                if (err) {
+                    reject({ message: err.code });
+                    return;
+                }
+
+                if (result.affectedRows == 0) {
+                    reject({ code: 500, message: 'no affected rows' });
+                    return;
+                }
+
+                resolve(store);
+            });
+        });
+    })
+    .then(function (store) {
+
+        var obj = {
+            "message": "OK",
+            "image_path": store.image_path
+        };
+
+        res.status(200).json(obj);
+    })
+    .catch(function (error) {
+
+        if (req.file.path) {
+            fs.unlink(req.file.path, function (err) {});
+        }
+
+        res.status(error.code || 500).json({ message: error.message });
+        console.log('catch error', error);
+    });
+};
 
 var putHandler = function (req, res, next) {
 

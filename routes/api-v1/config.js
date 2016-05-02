@@ -8,6 +8,7 @@ var mysqlPool = mysql.createPool({
 });
 
 module.exports = {
-    connPool: mysqlPool
+    connPool: mysqlPool,
+    imageHost: process.env.ShaImageHost
 };
 
