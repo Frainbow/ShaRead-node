@@ -275,7 +275,7 @@ var postImageHandler = function (req, res, next) {
     })
     .then(function () {
         // save store image to disk
-        var image_name = 'image.jpg';
+        var image_name = 'store_image.jpg';
         var image_folder = '/images/stores/' + store_id;
         var image_path = image_folder + '/' + image_name;
         var source_path = req.file.path;
