@@ -36,7 +36,7 @@ var getHandler = function (req, res, next) {
 
         return new Promise(function (resolve, reject) {
 
-            connPool.query('select store.id, store.name, store.image_path, store.description from store, store_list where store.id = store_list.store_id and store_list.user_id = ?', [user.user_id], function (err, result) {
+            connPool.query('select store.id, store.name, store.image_path, store.description, store.address, store.longitude, store.latitude from store, store_list where store.id = store_list.store_id and store_list.user_id = ?', [user.user_id], function (err, result) {
 
                 if (err) {
                     reject({ message: err.code });
@@ -50,7 +50,12 @@ var getHandler = function (req, res, next) {
                         store_id: result[i].id,
                         store_name: result[i].name,
                         store_image: result[i].image_path,
-                        description: result[i].description
+                        description: result[i].description,
+                        position: {
+                            address: result[i].address,
+                            longitude: result[i].longitude,
+                            latitude: result[i].latitude
+                        }
                     });
                 }
 
