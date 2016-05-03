@@ -27,11 +27,6 @@ var postHandler = function (req, res, next) {
     var token = req.query.auth_token
     var isbn = req.body.isbn;
 
-    if (isbn) {
-        postISBNHandler(req, res, next);
-        return;
-    }
-
     if (token == undefined) {
         var obj = { message: "no token" };
 
@@ -39,14 +34,12 @@ var postHandler = function (req, res, next) {
         return;
     }
 
-    var obj = {
-        "message": "OK"
-    };
+    if (isbn == undefined) {
+        var obj = { message: "no necessary colums" };
 
-    res.status(200).json(obj);
-}
-
-var postISBNHandler = function (req, res, next) {
+        res.status(400).json(obj);
+        return;
+    }
 
     var token = req.query.auth_token
     var isbn = req.body.isbn;
@@ -293,7 +286,7 @@ var postISBNHandler = function (req, res, next) {
         res.status(error.code || 500).json({ message: error.message });
         console.log('catch error', error);
     });
-};
+}
 
 var putHandler = function (req, res, next) {
 
@@ -326,6 +319,13 @@ var putHandler = function (req, res, next) {
 
     if (req.body.style) {
         book.style = req.body.style;
+    }
+
+    if (Object.getOwnPropertyNames(book).length == 0) {
+        var obj = { message: "no update colums" };
+
+        res.status(400).json(obj);
+        return;
     }
 
     new Promise(function (resolve, reject) {
