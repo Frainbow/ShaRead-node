@@ -16,16 +16,12 @@ var getHandler = function (req, res, next) {
         return
     }
 
-    var obj = {
-        "message": "OK"
-    };
-
-    res.status(200).json(obj);
 }
 
 var postHandler = function (req, res, next) {
     var token = req.query.auth_token
     var isbn = req.body.isbn;
+    var user_id = 0;
 
     if (token == undefined) {
         var obj = { message: "no token" };
@@ -39,17 +35,6 @@ var postHandler = function (req, res, next) {
 
         res.status(400).json(obj);
         return;
-    }
-
-    var token = req.query.auth_token
-    var isbn = req.body.isbn;
-    var user_id = 0;
-
-    if (token == undefined) {
-        var obj = { message: "no token" };
-
-        res.status(400).json(obj);
-        return
     }
 
     new Promise(function (resolve, reject) {
