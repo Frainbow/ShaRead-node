@@ -31,6 +31,7 @@ router.put('/shelfs/:shelf_id', shelfsHandler.PUT);
 // books
 router.get('/books/isbn/:isbn', booksHandler.GET);
 router.post('/books', booksHandler.POST);
+router.put('/books/:book_id', booksHandler.PUT);
 // mrt
 router.get('/mrt', mrtHandler.GET);
 

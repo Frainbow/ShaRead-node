@@ -7,7 +7,7 @@ var mkdirp = require('mkdirp');
 
 var getHandler = function (req, res, next) {
 
-    var token = req.query.auth_token
+    var token = req.query.auth_token;
 
     if (token == undefined) {
         var obj = { message: "no token" };
@@ -295,8 +295,92 @@ var postISBNHandler = function (req, res, next) {
     });
 };
 
+var putHandler = function (req, res, next) {
+
+    var token = req.query.auth_token;
+    var book_id = req.params.book_id;
+    var book = {};
+
+    if (token == undefined) {
+        var obj = { message: "no token" };
+
+        res.status(400).json(obj);
+        return;
+    }
+
+    if (req.body.rent) {
+        book.rent = req.body.rent;
+    }
+
+    if (req.body.comment) {
+        book.comment = req.body.comment;
+    }
+
+    if (req.body.status) {
+        book.status = req.body.status;
+    }
+
+    if (req.body.category) {
+        book.category = req.body.category;
+    }
+
+    if (req.body.style) {
+        book.style = req.body.style;
+    }
+
+    new Promise(function (resolve, reject) {
+        // get user_id
+        connPool.query('select id from user where auth_token = ?', [token], function (err, result) {
+
+            if (err) {
+                reject({ message: err.code });
+                return;
+            }
+
+            if (result.length == 0) {
+                reject({ code: 403, message: "invalid token" });
+                return;
+            }
+
+            resolve({ user_id: result[0].id });
+        });
+    })
+    .then(function (user) {
+
+        return new Promise(function (resolve, reject) {
+
+            connPool.query('update book_list set ? where id = ? and user_id = ?', [book, book_id, user.user_id], function (err, result) {
+
+                if (err) {
+                    reject({ message: err.code });
+                    return;
+                }
+
+                if (result.affectedRows == 0) {
+                    reject({ code: 500, message: 'no affected rows' }); 
+                    return;
+                }
+
+                resolve();
+            });
+        });
+    })
+    .then(function () {
+        var obj = {
+            "message": "OK"
+        };
+
+        res.status(200).json(obj);
+    })
+    .catch(function (error) {
+        res.status(error.code || 500).json({ message: error.message });
+        console.log('catch error', error);
+    });
+};
+
 module.exports = {
     GET: getHandler,
-    POST: postHandler
+    POST: postHandler,
+    PUT: putHandler
 }
 
