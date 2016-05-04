@@ -13,9 +13,69 @@ var getHandler = function (req, res, next) {
         var obj = { message: "no token" };
 
         res.status(400).json(obj);
-        return
+        return;
     }
 
+    new Promise(function (resolve, reject) {
+        // get user_id
+        connPool.query('select id from user where auth_token = ?', [token], function (err, result) {
+
+            if (err) {
+                reject({ message: err.code });
+                return;
+            }
+
+            if (result.length == 0) {
+                reject({ code: 403, message: "invalid token" });
+                return;
+            }
+
+            resolve({ user_id: result[0].id });
+        });
+    })
+    .then(function (user) {
+
+        return new Promise(function (resolve, reject) {
+
+            connPool.query('select book.name, book.price, book.image_path, book_list.id, book_list.rent, book_list.comment, book_list.status, book_list.category, book_list.style from book, book_list where book.id = book_list.book_id and book_list.user_id = ?', [user.user_id], function (err, result) {
+
+                if (err) {
+                    reject({ message: err.code });
+                    return;
+                }
+
+                var books = []
+
+                for (var i = 0; i < result.length; i++) {
+                    books.push({
+                        id: result[i].id,
+                        name: result[i].name,
+                        price: result[i].price,
+                        image_path: result[i].image_path,
+                        rent: result[i].rent,
+                        comment: result[i].comment,
+                        status: result[i].status,
+                        category: result[i].category,
+                        style: result[i].style
+                    });
+                }
+
+                resolve(books);
+            });
+        });
+    })
+    .then(function (books) {
+        var obj = {
+            "message": "OK",
+            "data": books
+        };
+
+        res.status(200).json(obj);
+    })
+    .catch(function (error) {
+        res.status(error.code || 500).json({ message: error.message });
+        console.log('catch error', error);
+    });
 }
 
 var postHandler = function (req, res, next) {
