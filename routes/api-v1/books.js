@@ -137,7 +137,8 @@ var postHandler = function (req, res, next) {
                         author: result[i].author,
                         publisher: result[i].publisher,
                         publish_date: result[i].publish_date,
-                        price: result[i].price
+                        price: result[i].price,
+                        image_path: result[i].image_path
                     });
                 }
 
@@ -288,30 +289,14 @@ var postHandler = function (req, res, next) {
                     user_id: user_id
                 };
 
-                connPool.query('select id from book_list where book_id = ? and user_id = ?', [book_list.book_id, book_list.user_id], function (err, result) {
+                connPool.query('insert into book_list set ?', [book_list], function (err, result) {
 
                     if (err) {
                         reject({ message: err.code });
                         return;
                     }
 
-                    if (result.length == 0) {
-
-                        connPool.query('insert into book_list set ?', [book_list], function (err, result) {
-
-                            if (err) {
-                                reject({ message: err.code });
-                                return;
-                            }
-
-                            books[index].id = result.insertId;
-                            getBookID(index + 1);
-                        });
-
-                        return;
-                    }
-
-                    books[index].id = result[0].id;
+                    books[index].id = result.insertId;
                     getBookID(index + 1);
                 });
             }
