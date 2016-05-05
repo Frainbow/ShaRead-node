@@ -21,6 +21,7 @@ router.get('/', function(req, res, next) {
 router.post('/login', loginHandler.POST);
 // stores
 router.get('/stores', storesHandler.GET);
+router.get('/stores/:store_id/:item', storesHandler.GET_DETAIL);
 router.post('/stores', storesHandler.POST);
 router.post('/stores/:store_id/images', upload.single('store_image'), storesHandler.POST);
 router.put('/stores/:store_id', storesHandler.PUT);

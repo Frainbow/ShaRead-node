@@ -168,6 +168,64 @@ var getLatestHandler = function (req, res, next) {
     });
 }
 
+var getDetailHandler = function (req, res, next) {
+
+    var store_id = req.params.store_id;
+    var item = req.params.item;
+
+    if (item == 'books') {
+        getBooksDetailHandler(req, res, next);
+        return;
+    }
+
+    next();
+}
+
+var getBooksDetailHandler = function (req ,res, next) {
+
+    var store_id = req.params.store_id;
+    var item = req.params.item;
+
+    new Promise(function (resolve, reject) {
+
+        connPool.query('select book_list.id, book.name, book.image_path, book_list.rent, book_list.category, book_list.style from store_list, book_list, book where store_list.store_id = ? and store_list.user_id = book_list.user_id and book_list.book_id = book.id;', [store_id], function (err, result) {
+
+            var books = []
+
+            if (err) {
+                reject({ message: err.code });
+                return;
+            }
+
+            for (var i = 0; i < result.length; i++) {
+                books.push({
+                    id: result[i].id,
+                    name: result[i].name,
+                    image_path: result[i].image_path,
+                    rent: result[i].rent,
+                    category: result[i].category,
+                    style: result[i].style
+                });
+            }
+
+            resolve(books)
+        });
+    })
+    .then(function (books) {
+
+        var obj = {
+            "message": "OK",
+            "data": books
+        };
+
+        res.status(200).json(obj);
+    })
+    .catch(function (error) {
+        res.status(error.code || 500).json({ message: error.message });
+        console.log('catch error', error);
+    });
+}
+
 var postHandler = function (req, res, next) {
 
     var token = req.query.auth_token;
@@ -551,6 +609,7 @@ var putHandler = function (req, res, next) {
 
 module.exports = {
     GET: getHandler,
+    GET_DETAIL: getDetailHandler,
     POST: postHandler,
     PUT: putHandler
 }
