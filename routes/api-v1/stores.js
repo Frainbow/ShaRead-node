@@ -6,7 +6,17 @@ var mkdirp = require('mkdirp');
 
 var getHandler = function (req, res, next) {
 
-    var token = req.query.auth_token
+    var token = req.query.auth_token;
+    var order = req.query.order;
+
+    if (order == 'popular') {
+        getPopularHandler(req, res, next);
+        return;
+    }
+    else if (order == 'latest') {
+        getLatestHandler(req, res, next);
+        return;
+    }
 
     if (token == undefined) {
         var obj = { message: "no token" };
@@ -61,6 +71,86 @@ var getHandler = function (req, res, next) {
 
                 resolve(stores);
             });
+        });
+    })
+    .then(function (stores) {
+
+        var obj = {
+            "message": "OK",
+            "data": stores
+        };
+
+        res.status(200).json(obj);
+    })
+    .catch(function (error) {
+        res.status(error.code || 500).json({ message: error.message });
+        console.log('catch error', error);
+    });
+}
+
+var getPopularHandler = function (req, res, next) {
+
+    new Promise(function (resolve, reject) {
+
+        connPool.query('select store.* from book_list, store_list, store where book_list.user_id = store_list.user_id and store_list.store_id = store.id group by book_list.user_id order by count(book_list.book_id) DESC limit 10', function (err, result) { 
+
+            var stores = []
+
+            if (err) {
+                reject({ message: err.code });
+                return;
+            }
+
+            for (var i = 0; i < result.length; i++) {
+                stores.push({
+                    store_id: result[i].id,
+                    store_name: result[i].name,
+                    store_image: result[i].image_path,
+                    description: result[i].description
+                });
+            }
+
+            resolve(stores)
+        });
+    })
+    .then(function (stores) {
+
+        var obj = {
+            "message": "OK",
+            "data": stores
+        };
+
+        res.status(200).json(obj);
+    })
+    .catch(function (error) {
+        res.status(error.code || 500).json({ message: error.message });
+        console.log('catch error', error);
+    });
+}
+
+var getLatestHandler = function (req, res, next) {
+
+    new Promise(function (resolve, reject) {
+
+        connPool.query('select * from store order by create_date DESC limit 10', function (err, result) {
+
+            var stores = []
+
+            if (err) {
+                reject({ message: err.code });
+                return;
+            }
+
+            for (var i = 0; i < result.length; i++) {
+                stores.push({
+                    store_id: result[i].id,
+                    store_name: result[i].name,
+                    store_image: result[i].image_path,
+                    description: result[i].description
+                });
+            }
+
+            resolve(stores)
         });
     })
     .then(function (stores) {
