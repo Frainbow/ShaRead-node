@@ -408,9 +408,72 @@ var putHandler = function (req, res, next) {
     });
 };
 
+var deleteHandler = function (req, res, next) {
+
+    var token = req.query.auth_token;
+    var book_id = req.params.book_id;
+
+    if (token == undefined) {
+        var obj = { message: "no token" };
+
+        res.status(400).json(obj);
+        return;
+    }
+
+    new Promise(function (resolve, reject) {
+        // get user_id
+        connPool.query('select id from user where auth_token = ?', [token], function (err, result) {
+
+            if (err) {
+                reject({ message: err.code });
+                return;
+            }
+
+            if (result.length == 0) {
+                reject({ code: 403, message: "invalid token" });
+                return;
+            }
+
+            resolve({ user_id: result[0].id });
+        });
+    })
+    .then(function (user) {
+
+        return new Promise(function (resolve, reject) {
+
+            connPool.query('delete from book_list where id = ? and user_id = ?', [book_id, user.user_id], function (err, result) {
+
+                if (err) {
+                    reject({ message: err.code });
+                    return;
+                }
+
+                if (result.affectedRows == 0) {
+                    reject({ code: 500, message: 'no affected rows' }); 
+                    return;
+                }
+
+                resolve();
+            });
+        });
+    })
+    .then(function () {
+        var obj = {
+            "message": "OK"
+        };
+
+        res.status(200).json(obj);
+    })
+    .catch(function (error) {
+        res.status(error.code || 500).json({ message: error.message });
+        console.log('catch error', error);
+    });
+}
+
 module.exports = {
     GET: getHandler,
     POST: postHandler,
-    PUT: putHandler
+    PUT: putHandler,
+    DELETE: deleteHandler
 }
 

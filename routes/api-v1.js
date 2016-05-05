@@ -32,6 +32,7 @@ router.put('/shelfs/:shelf_id', shelfsHandler.PUT);
 router.get('/books', booksHandler.GET);
 router.post('/books', booksHandler.POST);
 router.put('/books/:book_id', booksHandler.PUT);
+router.delete('/books/:book_id', booksHandler.DELETE);
 // mrt
 router.get('/mrt', mrtHandler.GET);
 
