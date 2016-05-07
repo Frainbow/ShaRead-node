@@ -8,6 +8,12 @@ var mkdirp = require('mkdirp');
 var getHandler = function (req, res, next) {
 
     var token = req.query.auth_token;
+    var order = req.query.order;
+
+    if (order == 'recommend') {
+        getRecommendHandler(req, res, next);
+        return;
+    }
 
     if (token == undefined) {
         var obj = { message: "no token" };
@@ -65,6 +71,47 @@ var getHandler = function (req, res, next) {
         });
     })
     .then(function (books) {
+        var obj = {
+            "message": "OK",
+            "data": books
+        };
+
+        res.status(200).json(obj);
+    })
+    .catch(function (error) {
+        res.status(error.code || 500).json({ message: error.message });
+        console.log('catch error', error);
+    });
+}
+
+var getRecommendHandler = function (req, res, next) {
+
+    new Promise(function (resolve, reject) {
+
+        connPool.query('select book_list.id, book.name, book.image_path, book_list.rent, book_list.comment from book, book_list where book.id = book_list.book_id and book_list.id in (select max(book_list.id) from book_list group by book_list.user_id order by max(book_list.id) DESC)', function (err, result) { 
+
+            var books = []
+
+            if (err) {
+                reject({ message: err.code });
+                return;
+            }
+
+            for (var i = 0; i < result.length; i++) {
+                books.push({
+                    id: result[i].id,
+                    name: result[i].name,
+                    image_path: result[i].image_path,
+                    rent: result[i].rent,
+                    comment: result[i].comment,
+                });
+            }
+
+            resolve(books)
+        });
+    })
+    .then(function (books) {
+
         var obj = {
             "message": "OK",
             "data": books
