@@ -88,7 +88,7 @@ var getRecommendHandler = function (req, res, next) {
 
     new Promise(function (resolve, reject) {
 
-        connPool.query('select book_list.id, book.name, book.image_path, book_list.rent, book_list.comment from book, book_list where book.id = book_list.book_id and book_list.id in (select max(book_list.id) from book_list group by book_list.user_id order by max(book_list.id) DESC)', function (err, result) { 
+        connPool.query('select book_list.id, book.name, book.image_path, book_list.rent, book_list.comment, user.fb_avatar  from book, book_list, user where book.id = book_list.book_id and book_list.id in (select max(book_list.id) from book_list group by book_list.user_id order by max(book_list.id) DESC) and book_list.user_id = user.id', function (err, result) { 
 
             var books = []
 
@@ -104,6 +104,7 @@ var getRecommendHandler = function (req, res, next) {
                     image_path: result[i].image_path,
                     rent: result[i].rent,
                     comment: result[i].comment,
+                    avatar: result[i].fb_avatar
                 });
             }
 

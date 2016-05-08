@@ -10,7 +10,7 @@ var postHandler = function(req, res, next) {
 
         new Promise(function (resolve, reject) {
             FB.setAccessToken(facebook_token);
-            FB.api('me', { fields: ['id', 'name', 'email'] }, function (res) {
+            FB.api('me', { fields: ['id', 'name', 'email', 'picture'] }, function (res) {
 
                 if (!res) {
                     reject({ message: 'error occurred' });
@@ -37,17 +37,19 @@ var postHandler = function(req, res, next) {
                 var user = {
                     email: value.email.toLocaleLowerCase(),
                     name: value.name,
+                    fb_avatar: value.picture.data.url,
+                    auth_token: token
+                };
+                var update = {
+                    name: value.name,
+                    fb_avatar: value.picture.data.url,
                     auth_token: token
                 };
 
-                connPool.query('insert into user set ?', user, function (err, result) {
+                connPool.query('insert into user set ? on duplicate key update ?', [user, update], function (err, result) {
 
                     if (err) {
-                        if (err.code == "ER_DUP_ENTRY") {
-                            resolve(user);
-                        } else {
-                            reject({ message: err.code });
-                        }
+                        reject({ message: err.code });
                         return;
                     }
 
@@ -55,34 +57,6 @@ var postHandler = function(req, res, next) {
 
                     resolve(user);
                 });
-            });
-        })
-        .then(function (user) {
-
-            if (user.id) {
-                return value;
-            }
-
-            return new Promise(function (resolve, reject) {
-
-                connPool.query('select id, auth_token from user where email = ?',
-                    [user.email],
-                    function (err, results, fields) {
-
-                        if (err) {
-                            reject({ message: err.code });
-                            return;
-                        }
-
-                        if (results.length > 0) {
-                            user.id = results[0].id;
-                            user.auth_token = results[0].auth_token;
-                            resolve(user);
-                        } else {
-                            reject({ message: 'empty result' });
-                        }
-                    }
-                );
             });
         })
         .then(function (user) {

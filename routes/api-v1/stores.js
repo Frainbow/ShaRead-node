@@ -92,7 +92,7 @@ var getPopularHandler = function (req, res, next) {
 
     new Promise(function (resolve, reject) {
 
-        connPool.query('select store.* from book_list, store_list, store where book_list.user_id = store_list.user_id and store_list.store_id = store.id group by book_list.user_id order by count(book_list.book_id) DESC limit 10', function (err, result) { 
+        connPool.query('select store.*, user.fb_avatar from user, book_list, store_list, store where user.id = book_list.user_id and book_list.user_id = store_list.user_id and store_list.store_id = store.id group by book_list.user_id order by count(book_list.book_id) DESC limit 10', function (err, result) { 
 
             var stores = []
 
@@ -106,7 +106,8 @@ var getPopularHandler = function (req, res, next) {
                     store_id: result[i].id,
                     store_name: result[i].name,
                     store_image: result[i].image_path,
-                    description: result[i].description
+                    description: result[i].description,
+                    avatar: result[i].fb_avatar
                 });
             }
 
@@ -132,7 +133,7 @@ var getLatestHandler = function (req, res, next) {
 
     new Promise(function (resolve, reject) {
 
-        connPool.query('select * from store order by create_date DESC limit 10', function (err, result) {
+        connPool.query('select store.id, store.name, store.image_path, store.description, user.fb_avatar from store, store_list, user where store.id = store_list.store_id and store_list.user_id = user.id order by store.create_date DESC limit 10', function (err, result) {
 
             var stores = []
 
@@ -146,7 +147,8 @@ var getLatestHandler = function (req, res, next) {
                     store_id: result[i].id,
                     store_name: result[i].name,
                     store_image: result[i].image_path,
-                    description: result[i].description
+                    description: result[i].description,
+                    avatar: result[i].fb_avatar
                 });
             }
 
