@@ -179,8 +179,92 @@ var getDetailHandler = function (req, res, next) {
         getBooksDetailHandler(req, res, next);
         return;
     }
+    else if (item !== undefined) {
+        next();
+        return;
+    }
 
-    next();
+
+    new Promise(function (resolve, reject) {
+        connPool.query('select store.*, user.fb_avatar from store, store_list, user where store.id = ? and store.id = store_list.store_id and store_list.user_id = user.id', [store_id], function (err, result) {
+
+            if (err) {
+                reject({ message: err.code });
+                return;
+            }
+
+            if (result.length == 0) {
+                reject({ code: 404, message: 'store not found' });
+                return;
+            }
+
+            if (result.length > 1) {
+                reject({ message: 'store conflict' });
+                return;
+            }
+
+            var stores = []
+
+            for (var i = 0; i < result.length; i++) {
+                stores.push({
+                    store_id: result[i].id,
+                    store_name: result[i].name,
+                    store_image: result[i].image_path,
+                    description: result[i].description,
+                    position: {
+                        address: result[i].address,
+                        longitude: result[i].longitude,
+                        latitude: result[i].latitude
+                    },
+                    create_date: result[i].create_date,
+                    avatar: result[i].fb_avatar,
+                    books: []
+                });
+            }
+
+            resolve(stores[0]);
+        });
+    })
+    .then(function (store) {
+
+        return new Promise(function (resolve, reject) {
+
+            connPool.query('select book_list.id, book.name, book.image_path, book_list.rent, book_list.category, book_list.style from store_list, book_list, book where store_list.store_id = ? and store_list.user_id = book_list.user_id and book_list.book_id = book.id;', [store.store_id], function (err, result) {
+
+                if (err) {
+                    reject({ message: err.code });
+                    return;
+                }
+
+                for (var i = 0; i < result.length; i++) {
+                    store.books.push({
+                        id: result[i].id,
+                        name: result[i].name,
+                        image_path: result[i].image_path,
+                        rent: result[i].rent,
+                        category: result[i].category,
+                        style: result[i].style
+                    });
+                }
+
+                resolve(store)
+            });
+        });
+    })
+    .then(function (store) {
+
+        var obj = {
+            "message": "OK",
+            "data": store
+        };
+
+        res.status(200).json(obj);
+    })
+    .catch(function (error) {
+        res.status(error.code || 500).json({ message: error.message });
+        console.log('catch error', error);
+    });
+
 }
 
 var getBooksDetailHandler = function (req ,res, next) {

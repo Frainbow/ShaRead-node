@@ -126,6 +126,68 @@ var getRecommendHandler = function (req, res, next) {
     });
 }
 
+
+var getDetailHandler = function (req, res, next) {
+    var book_id = req.params.book_id;
+
+    new Promise(function (resolve, reject) {
+
+        connPool.query('select book.name, book.author, book.publisher, book.publish_date, book.price, book_list.id, book_list.rent, book_list.comment, book_list.status, store.id as store_id, store.name as store_name, store.description as store_description, user.fb_avatar from book, book_list, store_list, store, user where book.id = book_list.book_id and book_list.id = ? and book_list.user_id = store_list.user_id and book_list.user_id = user.id and store_list.store_id = store.id ', [book_id], function (err, result) {
+
+            if (err) {
+                reject({ message: err.code });
+                return;
+            }
+
+            if (result.length == 0) {
+                reject({ code: 404, message: 'book not found' });
+                return;
+            }
+
+            if (result.length > 1) {
+                reject({ message: 'book conflict' });
+                return;
+            }
+
+            var books = []
+
+            for (var i = 0; i < result.length; i++) {
+                books.push({
+                    id: result[i].id,
+                    name: result[i].name,
+                    author: result[i].author,
+                    publisher: result[i].publisher,
+                    publish_date: result[i].publish_date,
+                    price: result[i].price,
+                    rent: result[i].rent,
+                    comment: result[i].comment,
+                    status: result[i].status,
+                    store: {
+                        store_id: result[i].store_id,
+                        store_name: result[i].store_name,
+                        description: result[i].store_description,
+                        avatar: result[i].fb_avatar
+                    }
+                });
+            }
+
+            resolve(books[0]);
+        });
+    })
+    .then(function (book) {
+        var obj = {
+            "message": "OK",
+            "data": book
+        };
+
+        res.status(200).json(obj);
+    })
+    .catch(function (error) {
+        res.status(error.code || 500).json({ message: error.message });
+        console.log('catch error', error);
+    });
+}
+
 var postHandler = function (req, res, next) {
     var token = req.query.auth_token
     var isbn = req.body.isbn;
@@ -520,6 +582,7 @@ var deleteHandler = function (req, res, next) {
 
 module.exports = {
     GET: getHandler,
+    GET_DETAIL: getDetailHandler,
     POST: postHandler,
     PUT: putHandler,
     DELETE: deleteHandler
