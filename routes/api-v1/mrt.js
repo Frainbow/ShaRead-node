@@ -5,7 +5,7 @@ var getHandler = function (req, res, next) {
 
     new Promise(function (resolve, reject) {
 
-        request('http://data.taipei/opendata/datalist/apiAccess?scope=resourceAquire&rid=7c7875a3-cfed-4d32-8cde-5ad22f237265', function (err, response, body) {
+        request('http://data.taipei/opendata/datalist/apiAccess?scope=resourceAquire&rid=7c7875a3-cfed-4d32-8cde-5ad22f237265', { timeout: 5 * 1000}, function (err, response, body) {
 
             if (err) {
                 reject({ message: err });
