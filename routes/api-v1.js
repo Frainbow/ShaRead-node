@@ -33,9 +33,12 @@ router.put('/shelfs/:shelf_id', shelfsHandler.PUT);
 // books
 router.get('/books', booksHandler.GET);
 router.get('/books/:book_id', booksHandler.GET_DETAIL);
+router.get('/books/:book_id/images', booksHandler.GET_IMAGES);
 router.post('/books', booksHandler.POST);
+router.post('/books/:book_id/images', upload.single('book_image'), booksHandler.POST_IMAGES);
 router.put('/books/:book_id', booksHandler.PUT);
 router.delete('/books/:book_id', booksHandler.DELETE);
+router.delete('/books/:book_id/images/:image_id', booksHandler.DELETE_IMAGES);
 // mrt
 router.get('/mrt', mrtHandler.GET);
 

@@ -62,12 +62,49 @@ var getHandler = function (req, res, next) {
                         comment: result[i].comment,
                         status: result[i].status,
                         category: result[i].category,
-                        style: result[i].style
+                        style: result[i].style,
+                        images: []
                     });
                 }
 
                 resolve(books);
             });
+        });
+    })
+    .then(function (books) {
+
+        if (books.length == 0)
+            return books;
+
+        return new Promise(function (resolve, reject) {
+
+            var index = 0;
+
+            function getBookImages(book) {
+
+                connPool.query('select id, image_path from book_image_list where book_id = ?', [book.id], function (err, result) {
+
+                    if (err) {
+                        reject({ message: err.code });
+                        return;
+                    }
+
+                    for (var i = 0; i < result.length; i++) {
+                        book.images.push({
+                            image_id: result[i].id,
+                            image_path: result[i].image_path
+                        });
+                    }
+
+                    if (++index == books.length)
+                        resolve(books);
+                    else
+                        getBookImages(books[index]);
+                });
+            }
+
+            getBookImages(books[index]);
+
         });
     })
     .then(function (books) {
@@ -104,11 +141,48 @@ var getRecommendHandler = function (req, res, next) {
                     image_path: result[i].image_path,
                     rent: result[i].rent,
                     comment: result[i].comment,
-                    avatar: result[i].fb_avatar
+                    avatar: result[i].fb_avatar,
+                    images: []
                 });
             }
 
             resolve(books)
+        });
+    })
+    .then(function (books) {
+
+        if (books.length == 0)
+            return books;
+
+        return new Promise(function (resolve, reject) {
+
+            var index = 0;
+
+            function getBookImages(book) {
+
+                connPool.query('select id, image_path from book_image_list where book_id = ?', [book.id], function (err, result) {
+
+                    if (err) {
+                        reject({ message: err.code });
+                        return;
+                    }
+
+                    for (var i = 0; i < result.length; i++) {
+                        book.images.push({
+                            image_id: result[i].id,
+                            image_path: result[i].image_path
+                        });
+                    }
+
+                    if (++index == books.length)
+                        resolve(books);
+                    else
+                        getBookImages(books[index]);
+                });
+            }
+
+            getBookImages(books[index]);
+
         });
     })
     .then(function (books) {
@@ -132,7 +206,7 @@ var getDetailHandler = function (req, res, next) {
 
     new Promise(function (resolve, reject) {
 
-        connPool.query('select book.name, book.author, book.publisher, book.publish_date, book.price, book_list.id, book_list.rent, book_list.comment, book_list.status, store.id as store_id, store.name as store_name, store.description as store_description, user.fb_avatar from book, book_list, store_list, store, user where book.id = book_list.book_id and book_list.id = ? and book_list.user_id = store_list.user_id and book_list.user_id = user.id and store_list.store_id = store.id ', [book_id], function (err, result) {
+        connPool.query('select book.name, book.author, book.publisher, book.publish_date, book.price, book.image_path, book_list.id, book_list.rent, book_list.comment, book_list.status, store.id as store_id, store.name as store_name, store.description as store_description, user.fb_avatar from book, book_list, store_list, store, user where book.id = book_list.book_id and book_list.id = ? and book_list.user_id = store_list.user_id and book_list.user_id = user.id and store_list.store_id = store.id ', [book_id], function (err, result) {
 
             if (err) {
                 reject({ message: err.code });
@@ -159,6 +233,7 @@ var getDetailHandler = function (req, res, next) {
                     publisher: result[i].publisher,
                     publish_date: result[i].publish_date,
                     price: result[i].price,
+                    image_path: result[i].image_path,
                     rent: result[i].rent,
                     comment: result[i].comment,
                     status: result[i].status,
@@ -167,11 +242,34 @@ var getDetailHandler = function (req, res, next) {
                         store_name: result[i].store_name,
                         description: result[i].store_description,
                         avatar: result[i].fb_avatar
-                    }
+                    },
+                    images: []
                 });
             }
 
             resolve(books[0]);
+        });
+    })
+    .then(function (book) {
+
+        return new Promise(function (resolve, reject) {
+
+            connPool.query('select id, image_path from book_image_list where book_id = ?', [book.id], function (err, result) {
+
+                if (err) {
+                    reject({ message: err.code });
+                    return;
+                }
+
+                for (var i = 0; i < result.length; i++) {
+                    book.images.push({
+                        image_id: result[i].id,
+                        image_path: result[i].image_path
+                    });
+                }
+
+                resolve(book);
+            });
         });
     })
     .then(function (book) {
@@ -186,6 +284,10 @@ var getDetailHandler = function (req, res, next) {
         res.status(error.code || 500).json({ message: error.message });
         console.log('catch error', error);
     });
+}
+
+var getImageHandler = function (req, res, next) {
+    next();
 }
 
 var postHandler = function (req, res, next) {
@@ -428,6 +530,132 @@ var postHandler = function (req, res, next) {
     });
 }
 
+var postImageHandler = function (req, res, next) {
+
+    var token = req.query.auth_token;
+    var book_id = req.params.book_id;
+
+    if (token == undefined) {
+        var obj = { message: "no token" };
+
+        res.status(400).json(obj);
+        return;
+    }
+
+    if (!req.file) {
+        var obj = { message: "no file" };
+
+        res.status(400).json(obj);
+        return;
+    }
+
+    new Promise(function (resolve, reject) {
+        // check auth_token
+        connPool.query('select id from user where auth_token = ?', [token], function (err, result) {
+
+            if (err) {
+                reject({ message: err.code });
+                return;
+            }
+
+            if (result.length == 0) {
+                reject({ code: 403, message: "invalid token" });
+                return;
+            }
+
+            resolve({ user_id: result[0].id })
+        });
+    })
+    .then(function (user) {
+        // check book owner
+        return new Promise(function (resolve, reject) {
+            connPool.query('select id from book_list where id = ? and user_id = ?', [book_id, user.user_id], function (err, result) {
+
+                if (err) {
+                    reject({ message: err.code });
+                    return;
+                }
+
+                if (result.length == 0) {
+                    reject({ code: 403, message: 'invalid owner' });
+                    return;
+                }
+
+                resolve();
+            });
+        });
+    })
+    .then(function () {
+        // save book image to disk
+        var image_name = req.file.filename + '.jpg';
+        var image_folder = '/images/user_books/' + book_id;
+        var image_path = image_folder + '/' + image_name;
+        var source_path = req.file.path;
+        var target_folder = __dirname + '/../../public' + image_folder
+        var target_path = target_folder + '/' + image_name;
+
+        return new Promise(function (resolve, reject) {
+
+            mkdirp(target_folder, function (err) {
+
+                if (err) {
+                    reject({ message: "mkdirp failed" });
+                    return;
+                }
+
+                fs.rename(source_path, target_path, function (err) {
+
+                    if (err) {
+                        reject({ message: err.code });
+                        return;
+                    }
+
+                    resolve({
+                        book_id: book_id,
+                        image_path: config.imageHost + image_path
+                    });
+                });
+            });
+        });
+    })
+    .then(function (value) {
+        // insert image path to DB
+        return new Promise(function (resolve, reject) {
+
+            connPool.query('insert into book_image_list set ?', [value], function (err, result) {
+
+                if (err) {
+                    reject({ message: err.code });
+                    return;
+                }
+
+                resolve({
+                    image_id: result.insertId,
+                    image_path: value.image_path
+                });
+            });
+        });
+    })
+    .then(function (value) {
+
+        var obj = {
+            "message": "OK",
+            "data": value
+        };
+
+        res.status(200).json(obj);
+    })
+    .catch(function (error) {
+
+        if (req.file.path) {
+            fs.unlink(req.file.path, function (err) {});
+        }
+
+        res.status(error.code || 500).json({ message: error.message });
+        console.log('catch error', error);
+    });
+}
+
 var putHandler = function (req, res, next) {
 
     var token = req.query.auth_token;
@@ -580,11 +808,18 @@ var deleteHandler = function (req, res, next) {
     });
 }
 
+var deleteImageHandler = function (req, res, next) {
+    next();
+}
+
 module.exports = {
     GET: getHandler,
     GET_DETAIL: getDetailHandler,
+    GET_IMAGES: getImageHandler,
     POST: postHandler,
+    POST_IMAGES: postImageHandler,
     PUT: putHandler,
-    DELETE: deleteHandler
+    DELETE: deleteHandler,
+    DELETE_IMAGES: deleteImageHandler
 }
 
