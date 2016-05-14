@@ -5,6 +5,7 @@ var config = require('./config');
 var connPool = config.connPool;
 var postHandler = function(req, res, next) {
     var facebook_token = req.body.facebook_token;
+    var firebase_uid = req.body.firebase_uid || '';
 
     if (facebook_token) {
 
@@ -34,16 +35,20 @@ var postHandler = function(req, res, next) {
 
             return new Promise(function (resolve, reject) {
                 var token = md5(value.email.toLocaleLowerCase() + Math.random());
+
                 var user = {
                     email: value.email.toLocaleLowerCase(),
                     name: value.name,
                     fb_avatar: value.picture.data.url,
-                    auth_token: token
+                    auth_token: token,
+                    firebase_uid: firebase_uid
                 };
+
                 var update = {
                     name: value.name,
                     fb_avatar: value.picture.data.url,
-                    auth_token: token
+                    auth_token: token,
+                    firebase_uid: firebase_uid
                 };
 
                 connPool.query('insert into user set ? on duplicate key update ?', [user, update], function (err, result) {

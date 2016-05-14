@@ -206,7 +206,7 @@ var getDetailHandler = function (req, res, next) {
 
     new Promise(function (resolve, reject) {
 
-        connPool.query('select book.name, book.author, book.publisher, book.publish_date, book.price, book.image_path, book_list.id, book_list.rent, book_list.comment, book_list.status, store.id as store_id, store.name as store_name, store.description as store_description, user.fb_avatar from book, book_list, store_list, store, user where book.id = book_list.book_id and book_list.id = ? and book_list.user_id = store_list.user_id and book_list.user_id = user.id and store_list.store_id = store.id ', [book_id], function (err, result) {
+        connPool.query('select book.name, book.author, book.publisher, book.publish_date, book.price, book.image_path, book_list.id, book_list.rent, book_list.comment, book_list.status, store.id as store_id, store.name as store_name, store.description as store_description, user.fb_avatar, user.firebase_uid from book, book_list, store_list, store, user where book.id = book_list.book_id and book_list.id = ? and book_list.user_id = store_list.user_id and book_list.user_id = user.id and store_list.store_id = store.id ', [book_id], function (err, result) {
 
             if (err) {
                 reject({ message: err.code });
@@ -242,6 +242,10 @@ var getDetailHandler = function (req, res, next) {
                         store_name: result[i].store_name,
                         description: result[i].store_description,
                         avatar: result[i].fb_avatar
+                    },
+                    owner: {
+                        avatar: result[i].fb_avatar,
+                        firebase_uid: result[i].firebase_uid
                     },
                     images: []
                 });
