@@ -1,9 +1,15 @@
 var Promise = require('promise');
 var request = require('request');
+var MRTStation;
 
 var getHandler = function (req, res, next) {
 
     new Promise(function (resolve, reject) {
+
+        if (MRTStation) {
+            resolve(MRTStation);
+            return;
+        }
 
         request('http://data.taipei/opendata/datalist/apiAccess?scope=resourceAquire&rid=7c7875a3-cfed-4d32-8cde-5ad22f237265', { timeout: 5 * 1000}, function (err, response, body) {
 
@@ -55,7 +61,8 @@ var getHandler = function (req, res, next) {
                     });
                 }
 
-                resolve(station);
+                MRTStation = station;
+                resolve(MRTStation);
                 return;
             }
 
